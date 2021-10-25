@@ -1,0 +1,86 @@
+using System;
+using System.Collections.Generic;
+using System.Text;
+using System.Runtime.InteropServices;
+using System.Net;
+using System.Net.Sockets;
+namespace Ntp
+{
+	class Program
+	{
+		static void Main(string[] args)
+		{	// Code -----------------22222222222222222-------------
+			try
+			{
+				// Lay Service: ExamService examService = new ExamService();
+				string FormatDateTime = "dd/MM/yyyy HH:mm:ss.fff";
+				const string ntpServer = "time.windows.com";// ngay mai copy cai www.hocvienmang.com
+				IPAddress[] addresses = Dns.GetHostEntry(ntpServer).AddressList;
+				IPEndPoint ipEndPoint = new IPEndPoint(addresses[0], 123); 														   
+				byte[] ntpData = new byte[48];
+				ntpData[0] = 0x1B; 
+				DateTime T1 = System.DateTime.Now; //T1                
+				using (Socket socket = new Socket(AddressFamily.InterNetwork,
+					SocketType.Dgram, ProtocolType.Udp))
+				{
+					socket.Connect(ipEndPoint);
+					socket.ReceiveTimeout = 3000;
+					socket.Send(ntpData);
+					socket.Receive(ntpData);
+					socket.Close();
+				}
+				/// code thay giao
+				/// long time = examService.GetNtpMesss(...);
+				/// DateTime T4 = new DateTime(time).TolocalTime();  // T4
+				DateTime T4 = System.DateTime.Now; //T4
+				byte Position = 32; //Received Time 
+				DateTime T2 = convertToDate(ntpData, Position).ToLocalTime(); //T2
+				Position = 40;
+				DateTime T3 = convertToDate(ntpData, Position).ToLocalTime(); //T3
+				long Theta = (long)Math.Round(((T2.Ticks - T1.Ticks)
+					+ (T3.Ticks - T4.Ticks)) / 2.0, 0, MidpointRounding.AwayFromZero);
+				DateTime FinalDateTime = T4.AddTicks(Theta);
+
+				/// examService.Submit(); // test thu console mới submit
+				
+				Console.WriteLine("T1: " + T1.ToString(FormatDateTime));
+				Console.WriteLine(Environment.NewLine);
+				Console.WriteLine("T2: " + T2.ToString(FormatDateTime));
+				Console.WriteLine(Environment.NewLine);
+				Console.WriteLine("T3: " + T3.ToString(FormatDateTime));
+				Console.WriteLine(Environment.NewLine);
+				Console.WriteLine("T4: " + T4.ToString(FormatDateTime));
+				Console.WriteLine(Environment.NewLine);
+				Console.WriteLine("Theta: " + Theta.ToString());
+				Console.WriteLine(Environment.NewLine);
+				Console.WriteLine("Final Time: " + FinalDateTime.ToString(FormatDateTime));
+			}
+			catch (Exception e)
+			{
+				Console.WriteLine(e.ToString());
+			}
+			Console.ReadKey();
+		}
+		//----------------------CODE 111111-------------------------
+		static DateTime convertToDate(byte[] bytes, byte Position)
+		{
+			DateTime dt = new DateTime(1900, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+			byte[] array = new byte[4];
+			Array.Copy(bytes, Position, array, 0, 4);
+			Array.Reverse(array);
+			ulong nguyen = BitConverter.ToUInt32(array, 0);
+
+			for (int i = 0; i < 4; i++)
+			{
+				array[i] = bytes[Position + i + 4];
+			}
+			Array.Reverse(array);
+			ulong du = BitConverter.ToUInt32(array, 0);
+
+			ulong milisecond = nguyen * 1000 + (du * 1000) / UInt32.MaxValue;
+			dt = dt.AddMilliseconds(milisecond);
+			return dt;
+		}
+	}
+
+}
