@@ -1,0 +1,73 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace Pratice1
+{
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            try
+            {
+
+                string format = "dd/MM/yyyy HH:mm:ss.fff";
+                ExamForNtp01 exam = new ExamForNtp01();
+long t1 = 0 ; 
+                long t4 = 0;
+                byte[] ntpData = new byte[48];
+                exam.GetNtpMessage("longptit0612", "!01654689748Az", 435, 31754, ref t4, ref ntpData);
+                Console.WriteLine(t4);
+                
+                byte Position = 32;
+                DateTime T2 = ConvertDateTime(ntpData, Position).ToLocalTime();
+                Position = 40;
+
+                DateTime T3 = ConvertDateTime(ntpData, Position).ToLocalTime();
+
+                DateTime T1 = System.DateTime.Now;
+                DateTime T4 = new DateTime(t4).ToLocalTime();
+                Console.WriteLine("T1" + T1);
+                Console.WriteLine("T2" + T2);
+                Console.WriteLine("T3" +T3);
+                Console.WriteLine("t4" + t4);
+
+                long theta = (long)Math.Round(((T2.Ticks - T1.Ticks) + (T3.Ticks - T4.Ticks))/ 2.0,0, MidpointRounding.AwayFromZero);
+                DateTime T5 = T4.AddTicks(theta);
+                Console.WriteLine("t5" + T4);
+                
+                exam.Submit("longptit0612", "!01654689748Az", 435, 31754, T1, T2, T3, T4, theta, T5);
+
+
+
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+            }
+            Console.ReadKey();
+        }
+        static DateTime ConvertDateTime(byte[] bytes, byte Position)
+        {
+            DateTime dt = new DateTime(1900, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+            byte[] arr = new byte[4];
+            Array.Copy(bytes, Position, arr, 0, 4);
+            Array.Reverse(arr);
+            ulong nguyen = BitConverter.ToUInt32(arr, 0);
+
+            for (int i = 0; i < 4; i++)
+            {
+                arr[i] = bytes[Position + i + 4];
+
+            }
+            Array.Reverse(arr);
+            ulong du = BitConverter.ToUInt32(arr, 0);
+            ulong mili = nguyen * 1000 + (du * 1000) / UInt32.MaxValue;
+            dt = dt.AddMilliseconds(mili);
+            return dt;
+        }
+    }
+    
+}
